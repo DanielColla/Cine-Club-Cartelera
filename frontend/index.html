@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cine Club  - Cartelera de Películas</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <div class="logo">
+                <i class="fas fa-film"></i>
+                <h1>Cine Universidad</h1>
+            </div>
+            <nav>
+                 <ul>
+                    <li><a href="#cartelera" class="active"><i class="fas fa-film"></i> Cartelera</a></li>
+                    <li><a href="#admin-login" id="admin-link"><i class="fas fa-user-cog"></i> Admin</a></li>
+                    <li><a href="#about"><i class="fas fa-info-circle"></i> Acerca de</a></li>
+                 </ul>
+            </nav>
+            <div class="mobile-menu">
+                <i class="fas fa-bars"></i>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h2>Cartelera Cinematográfica Universitaria</h2>
+                <p>Descubre las mejores películas que se proyectarán en nuestra facultad. ¡No te pierdas ninguna!</p>
+                <a href="#cartelera" class="btn-primary">Ver Cartelera</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Cartelera de Películas -->
+    <section id="cartelera" class="peliculas-section">
+        <div class="container">
+            <h2 class="section-title">Películas en Cartelera</h2>
+            <div class="filtros">
+                <button class="filtro-btn active" data-genero="todos">Todas</button>
+                <button class="filtro-btn" data-genero="drama">Drama</button>
+                <button class="filtro-btn" data-genero="ciencia-ficcion">Ciencia Ficción</button>
+                <button class="filtro-btn" data-genero="accion">Acción</button>
+                <button class="filtro-btn" data-genero="comedia">Comedia</button>
+            </div>
+            <div id="peliculas-container" class="peliculas-grid">
+                <!-- Las películas se cargarán aquí dinámicamente -->
+                <div class="loading">Cargando películas...</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Modal para detalles de película -->
+    <div id="pelicula-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <div id="modal-body">
+                <!-- Contenido dinámico del modal -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel de Administración -->
+    <section id="admin-panel" class="admin-section">
+        <div class="container">
+            <h2 class="section-title">Panel de Administración</h2>
+            
+            <!-- Login de Admin -->
+            <div id="admin-login" class="admin-login">
+                <h3>Iniciar Sesión como Administrador</h3>
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="username">Usuario:</label>
+                        <input type="text" id="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Contraseña:</label>
+                        <input type="password" id="password" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Iniciar Sesión</button>
+                    <p class="note">Credenciales de demostración: usuario: "admin", contraseña: "admin123"</p>
+                </form>
+            </div>
+
+            <!-- Panel de gestión (oculto hasta login) -->
+            <div id="admin-management" style="display: none;">
+                <div class="admin-actions">
+                    <button id="add-pelicula-btn" class="btn-success">
+                        <i class="fas fa-plus"></i> Agregar Nueva Película
+                    </button>
+                    <button id="logout-btn" class="btn-danger">
+                        <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                    </button>
+                </div>
+
+                <!-- Formulario para agregar/editar película -->
+                <div id="pelicula-form-container" style="display: none;">
+                    <h3 id="form-title">Agregar Nueva Película</h3>
+                    <form id="pelicula-form">
+                        <input type="hidden" id="pelicula-id">
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="titulo">Título *</label>
+                                <input type="text" id="titulo" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="fecha">Fecha de Proyección *</label>
+                                <input type="date" id="fecha" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="genero">Género</label>
+                                <select id="genero">
+                                    <option value="accion">Acción</option>
+                                    <option value="drama">Drama</option>
+                                    <option value="comedia">Comedia</option>
+                                    <option value="ciencia-ficcion">Ciencia Ficción</option>
+                                    <option value="terror">Terror</option>
+                                    <option value="romance">Romance</option>
+                                    <option value="aventura">Aventura</option>
+                                    <option value="otros">Otros</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="duracion">Duración (minutos)</label>
+                                <input type="number" id="duracion" min="1" value="120">
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="director">Director</label>
+                                <input type="text" id="director">
+                            </div>
+                            <div class="form-group">
+                                <label for="actores">Actores Principales</label>
+                                <input type="text" id="actores" placeholder="Separados por comas">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="sinopsis">Sinopsis *</label>
+                            <textarea id="sinopsis" rows="4" required></textarea>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="imagen">URL de la Imagen</label>
+                                <input type="url" id="imagen" placeholder="https://ejemplo.com/imagen.jpg">
+                            </div>
+                            <div class="form-group">
+                                <label for="trailer">URL del Trailer (YouTube)</label>
+                                <input type="url" id="trailer" placeholder="https://youtube.com/watch?v=...">
+                            </div>
+                        </div>
+                        
+                        <div class="form-buttons">
+                            <button type="submit" class="btn-success">Guardar Película</button>
+                            <button type="button" id="cancel-form-btn" class="btn-secondary">Cancelar</button>
+                        </div>
+                        <p class="note">* Campos obligatorios</p>
+                    </form>
+                </div>
+
+                <!-- Lista de películas para administrar -->
+                <div id="admin-peliculas-list">
+                    <h3>Películas Existentes</h3>
+                    <div id="admin-peliculas-container">
+                        <!-- Las películas se cargarán aquí para administración -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>Cine Club UCI</h3>
+                    <p>Proyecto estudiantil para la gestión de cartelera cinematográfica universitaria de la UCI.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Desarrollado por</h3>
+                    <p>Estudiante de la universidad Daniel Collazo Aldana</p>
+                    <p>Para aprendizaje y difusión cultural</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Contacto</h3>
+                    <p>dcollazo@estudiante.uci.cu</p>
+                    <p>FIO, UCI </p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Cine Club. Proyecto educativo.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/app.js"></script>
+</body>
+</html>
