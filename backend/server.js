@@ -17,10 +17,11 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// Servir archivos estáticos del frontend en producción
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../frontend')));
-}
+// Servir archivos estáticos del frontend
+app.use(express.static(path.join(__dirname, '../frontend')));
+
+// Servir específicamente la carpeta de imágenes
+app.use('/images', express.static(path.join(__dirname, '../frontend/images')));
 
 // Base de datos en archivo JSON
 const DB_FILE = path.join(__dirname, 'data', 'peliculas.json');
