@@ -1,14 +1,25 @@
 const express = require('express');
 const cors = require('cors');
-const fs = require('fs');
 const path = require('path');
+const { Pool } = require('pg');
+require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Configuración de PostgreSQL
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
+
+pool.on('error', (err) => {
+  console.error('Error en la conexión de BD:', err);
+});
+
 // Middleware - Configuración mejorada para producción
 const corsOptions = {
-  origin: '*', // En producción, cambia esto a tu dominio específico
+  origin: process.env.CORS_ORIGIN || '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
@@ -23,73 +34,46 @@ app.use(express.static(path.join(__dirname, '../frontend')));
 // Servir específicamente la carpeta de imágenes
 app.use('/images', express.static(path.join(__dirname, '../frontend/images')));
 
-// Base de datos en archivo JSON
-const DB_FILE = path.join(__dirname, 'data', 'peliculas.json');
-
-// Asegurar que existe el directorio de datos
-if (!fs.existsSync(path.join(__dirname, 'data'))) {
-  fs.mkdirSync(path.join(__dirname, 'data'), { recursive: true });
-}
-
-// Inicializar archivo de datos si no existe
-if (!fs.existsSync(DB_FILE)) {
-  const initialData = {
-    peliculas: [
-      {
-        id: 1,
-        titulo: "El Padrino",
-        sinopsis: "La historia de la familia Corleone, una de las más poderosas familias de la mafia italiana en Nueva York después de la Segunda Guerra Mundial.",
-        fecha: "2023-10-15",
-        genero: "drama",
-        duracion: "175",
-        director: "Francis Ford Coppola",
-        actores: "Marlon Brando, Al Pacino, James Caan",
-        imagen: "https://images.unsplash.com/photo-1536440136628-849c177e76a1?ixlib=rb-4.0.3&auto=format&fit=crop&w=1625&q=80",
-        trailer: "https://www.youtube.com/watch?v=sY1S34973zA",
-        fechaCreacion: new Date().toISOString()
-      },
-      {
-        id: 2,
-        titulo: "Interestelar",
-        sinopsis: "Un grupo de exploradores espaciales viaja a través de un agujero de gusano en busca de un nuevo hogar para la humanidad.",
-        fecha: "2023-10-20",
-        genero: "ciencia-ficcion",
-        duracion: "169",
-        director: "Christopher Nolan",
-        actores: "Matthew McConaughey, Anne Hathaway, Jessica Chastain",
-        imagen: "https://images.unsplash.com/photo-1534447677768-be436bb09401?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
-        trailer: "https://www.youtube.com/watch?v=zSWdZVtXT7E",
-        fechaCreacion: new Date().toISOString()
-      }
-    ],
-    usuarios: [{ id: 1, username: 'admin', password: 'admin123', role: 'admin' }]
-  };
-  
-  fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2));
-  console.log('Base de datos inicializada con datos de ejemplo');
-}
-
-// Helper para leer datos
-const readData = () => {
+// Inicializar base de datos
+const initializeDatabase = async () => {
   try {
-    const data = fs.readFileSync(DB_FILE, 'utf8');
-    return JSON.parse(data);
+    // Crear tabla de películas si no existe
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS peliculas (
+        id SERIAL PRIMARY KEY,
+        titulo VARCHAR(255) NOT NULL,
+        sinopsis TEXT,
+        fecha DATE,
+        genero VARCHAR(100),
+        duracion VARCHAR(10),
+        director VARCHAR(255),
+        actores TEXT,
+        imagen TEXT,
+        trailer TEXT,
+        fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Crear tabla de usuarios si no existe
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS usuarios (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(100) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        role VARCHAR(50) DEFAULT 'user',
+        fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    console.log('✓ Base de datos inicializada correctamente');
   } catch (error) {
-    console.error('Error leyendo archivo de datos:', error);
-    return { peliculas: [], usuarios: [] };
+    console.error('Error al inicializar la base de datos:', error);
+    process.exit(1);
   }
 };
 
-// Helper para escribir datos
-const writeData = (data) => {
-  try {
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
-    return true;
-  } catch (error) {
-    console.error('Error escribiendo archivo de datos:', error);
-    return false;
-  }
-};
+// Inicializar BD al arrancar
+initializeDatabase();
 
 // Ruta principal - Redirige al frontend en producción
 app.get('/', (req, res) => {
@@ -120,38 +104,36 @@ app.get('/api/health', (req, res) => {
 });
 
 // Obtener todas las películas
-app.get('/api/peliculas', (req, res) => {
+app.get('/api/peliculas', async (req, res) => {
   try {
-    const data = readData();
-    res.json(data.peliculas);
+    const result = await pool.query('SELECT * FROM peliculas ORDER BY id DESC');
+    res.json(result.rows);
   } catch (error) {
     console.error('Error obteniendo películas:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(500).json({ error: 'Error al obtener películas' });
   }
 });
 
 // Obtener una película por ID
-app.get('/api/peliculas/:id', (req, res) => {
+app.get('/api/peliculas/:id', async (req, res) => {
   try {
-    const data = readData();
-    const pelicula = data.peliculas.find((p) => p.id == req.params.id);
-
-    if (pelicula) {
-      res.json(pelicula);
+    const result = await pool.query('SELECT * FROM peliculas WHERE id = $1', [req.params.id]);
+    
+    if (result.rows.length > 0) {
+      res.json(result.rows[0]);
     } else {
       res.status(404).json({ error: 'Película no encontrada' });
     }
   } catch (error) {
     console.error('Error obteniendo película:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(500).json({ error: 'Error al obtener película' });
   }
 });
 
 // Agregar una nueva película (solo admin)
-app.post('/api/peliculas', (req, res) => {
+app.post('/api/peliculas', async (req, res) => {
   try {
     console.log('Solicitud POST recibida en /api/peliculas');
-    console.log('Headers:', req.headers['content-type']);
     console.log('Body recibido:', JSON.stringify(req.body, null, 2));
 
     if (!req.body || Object.keys(req.body).length === 0) {
@@ -184,46 +166,42 @@ app.post('/api/peliculas', (req, res) => {
       });
     }
 
-    const data = readData();
-    
     // Validar que la imagen sea una URL válida
     let imagenUrl = imagen;
     if (!imagenUrl || !imagenUrl.startsWith('http')) {
       imagenUrl = 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?ixlib=rb-4.0.3&auto=format&fit=crop&w=1625&q=80';
     }
 
-    const nuevaPelicula = {
-      id: Date.now(),
-      titulo: String(titulo).trim(),
-      sinopsis: String(sinopsis).trim(),
-      fecha: String(fecha),
-      genero: genero || 'No especificado',
-      duracion: String(duracion || '120'),
-      director: director || 'No especificado',
-      actores: actores || 'No especificado',
-      imagen: imagenUrl,
-      trailer: trailer || '',
-      fechaCreacion: new Date().toISOString(),
-    };
+    const query = `
+      INSERT INTO peliculas (titulo, sinopsis, fecha, genero, duracion, director, actores, imagen, trailer)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING *
+    `;
+    
+    const values = [
+      titulo.trim(),
+      sinopsis.trim(),
+      fecha,
+      genero || 'No especificado',
+      duracion || '120',
+      director || 'No especificado',
+      actores || 'No especificado',
+      imagenUrl,
+      trailer || ''
+    ];
 
-    console.log('Nueva película creada:', nuevaPelicula);
-
-    data.peliculas.push(nuevaPelicula);
-    const success = writeData(data);
-
-    if (success) {
-      res.status(201).json(nuevaPelicula);
-    } else {
-      res.status(500).json({ error: 'Error al guardar la película' });
-    }
+    const result = await pool.query(query, values);
+    console.log('Película creada:', result.rows[0]);
+    
+    res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('Error agregando película:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(500).json({ error: 'Error al agregar película' });
   }
 });
 
 // Actualizar una película (solo admin)
-app.put('/api/peliculas/:id', (req, res) => {
+app.put('/api/peliculas/:id', async (req, res) => {
   try {
     console.log('Solicitud PUT recibida en /api/peliculas/', req.params.id);
 
@@ -237,35 +215,41 @@ app.put('/api/peliculas/:id', (req, res) => {
       return res.status(403).json({ error: 'Acceso no autorizado' });
     }
 
-    const data = readData();
-    const index = data.peliculas.findIndex((p) => p.id == req.params.id);
+    // Construir dinámicamente la consulta UPDATE
+    const fields = [];
+    const values = [];
+    let paramIndex = 1;
 
-    if (index === -1) {
+    Object.entries(updatedData).forEach(([key, value]) => {
+      if (key !== 'id') {
+        fields.push(`${key} = $${paramIndex}`);
+        values.push(value);
+        paramIndex++;
+      }
+    });
+
+    if (fields.length === 0) {
+      return res.status(400).json({ error: 'No hay campos para actualizar' });
+    }
+
+    values.push(req.params.id);
+    const query = `UPDATE peliculas SET ${fields.join(', ')} WHERE id = $${paramIndex} RETURNING *`;
+
+    const result = await pool.query(query, values);
+
+    if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Película no encontrada' });
     }
 
-    // Actualizar solo los campos proporcionados
-    data.peliculas[index] = {
-      ...data.peliculas[index],
-      ...updatedData,
-      duracion: String(updatedData.duracion || data.peliculas[index].duracion),
-    };
-
-    const success = writeData(data);
-
-    if (success) {
-      res.json(data.peliculas[index]);
-    } else {
-      res.status(500).json({ error: 'Error al actualizar la película' });
-    }
+    res.json(result.rows[0]);
   } catch (error) {
     console.error('Error actualizando película:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(500).json({ error: 'Error al actualizar película' });
   }
 });
 
 // Eliminar una película (solo admin)
-app.delete('/api/peliculas/:id', (req, res) => {
+app.delete('/api/peliculas/:id', async (req, res) => {
   try {
     console.log('Solicitud DELETE recibida en /api/peliculas/', req.params.id);
 
@@ -279,42 +263,34 @@ app.delete('/api/peliculas/:id', (req, res) => {
       return res.status(403).json({ error: 'Acceso no autorizado' });
     }
 
-    const data = readData();
-    const initialLength = data.peliculas.length;
+    const result = await pool.query('DELETE FROM peliculas WHERE id = $1 RETURNING id', [req.params.id]);
 
-    data.peliculas = data.peliculas.filter((p) => p.id != req.params.id);
-
-    if (data.peliculas.length === initialLength) {
+    if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Película no encontrada' });
     }
 
-    const success = writeData(data);
-
-    if (success) {
-      res.json({ 
-        success: true, 
-        message: 'Película eliminada exitosamente',
-        peliculasRestantes: data.peliculas.length 
-      });
-    } else {
-      res.status(500).json({ error: 'Error al eliminar la película' });
-    }
+    res.json({ 
+      success: true, 
+      message: 'Película eliminada exitosamente',
+      idEliminado: result.rows[0].id
+    });
   } catch (error) {
     console.error('Error eliminando película:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(500).json({ error: 'Error al eliminar película' });
   }
 });
 
 // Login simple
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
   try {
     const { username, password } = req.body;
-    const data = readData();
-    const usuario = data.usuarios.find(
-      (u) => u.username === username && u.password === password
+    const result = await pool.query(
+      'SELECT * FROM usuarios WHERE username = $1 AND password = $2',
+      [username, password]
     );
 
-    if (usuario) {
+    if (result.rows.length > 0) {
+      const usuario = result.rows[0];
       res.json({ 
         success: true, 
         username: usuario.username, 
@@ -326,7 +302,7 @@ app.post('/api/login', (req, res) => {
     }
   } catch (error) {
     console.error('Error en login:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(500).json({ error: 'Error en login' });
   }
 });
 

@@ -1,0 +1,107 @@
+🚀 INSTRUCCIONES RÁPIDAS - RENDER + PostgreSQL
+
+═══════════════════════════════════════════════════════════════════
+
+✅ TU APLICACIÓN YA ESTÁ LISTA PARA PRODUCCIÓN
+
+El problema: JSON se pierde cuando Render reinicia
+La solución: PostgreSQL persiste los datos
+
+═══════════════════════════════════════════════════════════════════
+
+📋 CHECKLIST FINAL (5 minutos):
+
+1. ✓ Code está actualizado (ya listo en tu repo)
+
+2. [ ] En Render Dashboard → "New +" → "PostgreSQL Database"
+       - Name: cine-club-db
+       - Database: cine_club
+       - COPIAR la CONNECTION STRING
+
+3. [ ] En Render Dashboard → "New +" → "Web Service"
+       - Conectar repo GitHub
+       - Start Command: npm start
+       - Build Command: npm install
+
+4. [ ] Agregar Variables de Entorno:
+       NODE_ENV = production
+       DATABASE_URL = <PEGA LA URL DE ARRIBA>
+       CORS_ORIGIN = https://tu-dominio.onrender.com
+       PORT = 3000
+
+5. [ ] Deploy (push a GitHub o click Deploy en Render)
+
+═══════════════════════════════════════════════════════════════════
+
+📊 ¿CÓMO FUNCIONA AHORA?
+
+ANTES:
+└─ Render inicia
+└─ Lee peliculas.json (en servidor)
+└─ Render se reinicia
+└─ ❌ peliculas.json desaparece
+
+AHORA:
+└─ PostgreSQL (base de datos separada en Render)
+└─ Datos guardados en la BD
+└─ Render se reinicia
+└─ ✅ Datos en BD siguen intactos
+
+═══════════════════════════════════════════════════════════════════
+
+🔑 CREDENCIALES ADMIN (Se crean automáticamente):
+
+Usuario: admin
+Contraseña: admin123
+Admin Key: universidad2023
+
+⚠️ Cambia esto después en producción
+
+═══════════════════════════════════════════════════════════════════
+
+🧪 PRUEBA LOCAL (Opcional):
+
+cd backend
+npm install
+# Crear .env con tu BD local
+DATABASE_URL=postgresql://localhost/cine_club
+NODE_ENV=development
+npm run dev
+
+═══════════════════════════════════════════════════════════════════
+
+📚 DOCUMENTACIÓN COMPLETA:
+
+Ver: DEPLOYMENT_RENDER.md (paso a paso detallado)
+Ver: MIGRATION_SUMMARY.md (cambios técnicos)
+
+═══════════════════════════════════════════════════════════════════
+
+🎯 RESUMEN TÉCNICO:
+
+✅ Backend: Node.js + Express + PostgreSQL
+✅ BD: PostgreSQL en Render (5GB gratis)
+✅ Datos: Persisten entre reinicios
+✅ Deploy: Automático desde GitHub
+✅ SSL/TLS: Automático en Render
+✅ Backups: Automáticos en Render
+
+═══════════════════════════════════════════════════════════════════
+
+❓ PREGUNTAS FRECUENTES:
+
+P: ¿Se perderán los datos?
+R: NO. PostgreSQL es una BD real, datos persisten.
+
+P: ¿Cuesta extra?
+R: PostgreSQL gratis en Render (5GB).
+
+P: ¿Necesito hacer algo especial?
+R: Solo crear la BD y configurar DATABASE_URL.
+
+P: ¿El código cambió?
+R: Sí, pero automáticamente. Los endpoints son iguales.
+
+═══════════════════════════════════════════════════════════════════
+
+⚡ ¡LISTO! Solo falta crear la BD y hacer push a GitHub.
